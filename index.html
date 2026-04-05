@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infinite Runner</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: linear-gradient(#1e1e2f, #0f0f1a);
+        font-family: Arial, sans-serif;
+        color: white;
+    }
+
+    canvas {
+        display: block;
+    }
+
+    #ui {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 20px;
+    }
+
+    #gameOver {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        display: none;
+    }
+
+    button {
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        background: #00c3ff;
+        color: white;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+
+    button:hover {
+        background: #0099cc;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="ui">Счёт: <span id="score">0</span></div>
+
+<div id="gameOver">
+    <h1>Game Over</h1>
+    <button onclick="restart()">Играть снова</button>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let gravity = 0.6;
+let gameSpeed = 5;
+let score = 0;
+let gameRunning = true;
+
+const player = {
+    x: 100,
+    y: canvas.height - 150,
+    width: 50,
+    height: 50,
+    dy: 0,
+    jumpForce: -12,
+    grounded: true
+};
+
+const obstacles = [];
+
+function spawnObstacle() {
+    const size = 40 + Math.random() * 30;
+    obstacles.push({
+        x: canvas.width,
+        y: canvas.height - size - 100,
+        width: size,
+        height: size
+    });
+}
+
+setInterval(() => {
+    if (gameRunning) spawnObstacle();
+}, 1200);
+
+function update() {
+    if (!gameRunning) return;
+
+    // Player physics
+    player.dy += gravity;
+    player.y += player.dy;
+
+    if (player.y + player.height >= canvas.height - 100) {
+        player.y = canvas.height - 100 - player.height;
+        player.dy = 0;
+        player.grounded = true;
+    }
+
+    // Obstacles
+    obstacles.forEach((obs, index) => {
+        obs.x -= gameSpeed;
+
+        // Collision
+        if (
+            player.x < obs.x + obs.width &&
+            player.x + player.width > obs.x &&
+            player.y < obs.y + obs.height &&
+            player.y + player.height > obs.y
+        ) {
+            endGame();
+        }
+
+        // Remove off screen
+        if (obs.x + obs.width < 0) {
+            obstacles.splice(index, 1);
+        }
+    });
+
+    // Score
+    score++;
+    document.getElementById("score").innerText = score;
+
+    // Increase difficulty
+    if (score % 500 === 0) {
+        gameSpeed += 0.5;
+    }
+}
+
+function draw() {
+    // Background
+    ctx.fillStyle = "#0f0f1a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Ground
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+
+    // Player
+    ctx.fillStyle = "#00c3ff";
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+
+    // Obstacles
+    ctx.fillStyle = "#ff4d4d";
+    obstacles.forEach(obs => {
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+    });
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && player.grounded) {
+        player.dy = player.jumpForce;
+        player.grounded = false;
+    }
+});
+
+function endGame() {
+    gameRunning = false;
+    document.getElementById("gameOver").style.display = "block";
+}
+
+function restart() {
+    obstacles.length = 0;
+    player.y = canvas.height - 150;
+    player.dy = 0;
+    score = 0;
+    gameSpeed = 5;
+    gameRunning = true;
+    document.getElementById("gameOver").style.display = "none";
+}
+
+gameLoop();
+</script>
+
+</body>
+</html>
